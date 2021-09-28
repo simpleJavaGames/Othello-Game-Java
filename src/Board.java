@@ -326,7 +326,7 @@ public class Board {
         boolean hasEndPiece = false;
         //Checking if spot is legal vertically
         //From spot to top of board, does it have something to capture and an endpiece?
-        for(int i=(rowPos-1);i>0;i--){
+        for(int i=(rowPos-1);i>=0;i--){
             if(board[i][columnPos] == null) break;
             //does it have an opposite tile from tile to top of board / next endpiece?
             if((board[i][columnPos].getIsSpotWhite() == !player.getIsWhite())) hasSomethingToTake = true;
@@ -361,7 +361,7 @@ public class Board {
         //From spot to the left side of the board, does it have something to capture and an endpiece?
         hasEndPiece = false;
         hasSomethingToTake = false;
-        for(int i=(columnPos-1);i>0;i--){
+        for(int i=(columnPos-1);i>=0;i--){
             if(board[rowPos][i] == null) break;
             //does it have an opposite tile from tile to left side of board.
             if((board[rowPos][i].getIsSpotWhite() == !player.getIsWhite())) hasSomethingToTake = true;
