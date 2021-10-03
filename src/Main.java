@@ -1,4 +1,5 @@
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -10,8 +11,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
-
 import javafx.scene.text.Font;
+
+import java.util.Scanner;
+
+//There is 2 boards - the front end tileboard and the back end board.
 
 //The place piece problem only applies to white for some reason.
 public class Main extends Application {
@@ -76,35 +80,35 @@ public class Main extends Application {
 
         private Circle piece = new Circle(40);
         //Initialize all the grid spots.
-        public Tile(int rowPos,int colPos) {
-            this.rowPos = rowPos;
-            this.colPos = colPos;
+        public Tile(int newRowPos,int newColPos) {
+            rowPos = newRowPos;
+            colPos = newColPos;
             //Initialize all the circles inside the grids as transparent until we set it as either black or white.
             piece.setFill(null);
 
             Rectangle border = new Rectangle(100,100);
-            border.setFill(null);
+            border.setFill(Color.DARKGREEN);
             border.setStroke(Color.BLACK);
 
             setAlignment(Pos.CENTER);
             getChildren().addAll(border,piece);
+            //todo you need multithreading here to make the last piece show up.
 
             setOnMouseClicked(event -> {
                 if(!running) return;
-
                 if(event.getButton() == MouseButton.PRIMARY){
-                    if(whiteTurn && board.placePiece(white,this.rowPos,this.colPos)){
+                    if(whiteTurn && board.placePiece(white,this.rowPos,this.colPos) && running){
                         whiteTurn = false;
+                        setWhitePiece();
                         updateBoard();
                         isPlayable(black);
-                        setWhitePiece();
                         turnCounter++;
                     }
-                    else if (!whiteTurn && board.placePiece(black,this.rowPos,this.colPos)){
+                    else if (!whiteTurn && board.placePiece(black,this.rowPos,this.colPos) && running){
                         whiteTurn = true;
+                        setBlackPiece();
                         updateBoard();
                         isPlayable(white);
-                        setBlackPiece();
                         turnCounter++;
                     }
                 }
@@ -118,6 +122,11 @@ public class Main extends Application {
 
         public void setBlackPiece(){
             piece.setFill(Color.BLACK);
+        }
+
+        public void hidePiece(){
+            piece.setStroke(null);
+            piece.setFill(null);
         }
     }
 
@@ -166,37 +175,101 @@ public class Main extends Application {
         blackPiecesLabel.setText("Black:"+ numBlackPieces);
     }
 
+    //todo check this cause it was buggy.
     public void isPlayable(Player player){
         if(turnCounter == 59){
             running = false;
             System.out.println("Game is over.");
             displayWhoWon();
+            return;
         }
 
-        boolean loopRunning = true;
-        for(int i=0;(i<8) && loopRunning;i++){
-            for(int j=0;(j<8) && loopRunning;j++){
+        boolean gameUnplayable = true;
+        for(int i=0;(i<8) && gameUnplayable;i++){
+            for(int j=0;(j<8) && gameUnplayable;j++){
                 if(board.getBoardSpot(i,j) == null){
-                    if(board.isSpotValid(player, i, j)){//if there is no more legal moves for that player, the game ends.
-                        loopRunning = false;
+                    if(board.isSpotValid(player, i, j)){//if there is no more legal moves for that player, it will be true.
+                        gameUnplayable = false;
                     }
                 }
             }
         }
 
-        if(loopRunning){
+        if(gameUnplayable){
             running = false;
             System.out.println("No more legal moves. Ending Game");
             displayWhoWon();
         }
     }
 
+    //todo make this add a label to the screen so the front end can see who won.
     public void displayWhoWon(){
         if(numWhitePieces < numBlackPieces){
             System.out.println("Black wins!");
         }else{
             System.out.println("White wins!");
         }
+        playWinningPieceAnimation();
+    }
+
+    //todo fully implement the winning piece animation.
+    //todo make this into its own thread so white and black can run concurrently.
+    public void playWinningPieceAnimation(){
+        clearTileBoard();
+        waitHalfSecond();
+        waitHalfSecond();
+        //set all pieces from the top left of board to however many pieces there are to white to display how
+        //pieces white has.
+        int numWhiteFullRow = numWhitePieces / 8;
+        int numWhitePartialRow = numWhitePieces % 8;
+
+        //set the whole row to white.
+        for(int i=0;i<numWhiteFullRow;i++){
+            for(int j=0;j<8;j++){
+                tileBoard[i][j].setWhitePiece();
+                //thread.sleep for more drama.
+            }
+        }
+
+        //set part of the row to white.
+        if(numWhitePartialRow > 0){
+            int partialRowIndexWhite = numWhiteFullRow+1;
+            for(int j=0;j<numWhitePartialRow;j++){
+                tileBoard[partialRowIndexWhite][j].setWhitePiece();
+                //thread.sleep for more drama.
+            }
+        }
+
+        int numBlackFullRow = numBlackPieces / 8; //if 20 should be 2 full rows
+        int numBlackPartialRow = numBlackPieces % 8; // if 20 should be 4 remaining
+
+        //starting from the bottom right, fill the board to however many pieces black has.
+
+        //set the whole row to black
+        for(int i=7;i>(7-numBlackFullRow);i--){
+            for(int j=7;j>=0;j--){
+                tileBoard[i][j].setBlackPiece();
+            }
+        }
+
+        //set part of the row to black
+        if(numBlackPartialRow > 0){
+            int partialRowIndexBlack = 7-numBlackFullRow;
+            for(int j=7;j>=numBlackPartialRow;j--){
+                tileBoard[partialRowIndexBlack][j].setBlackPiece();
+            }
+        }
+
+    }
+
+    public void clearTileBoard() {
+        for (int i = 0; i < 8; i++)
+            for (int j = 0; j < 8; j++) tileBoard[i][j].hidePiece();
+    }
+
+    public void waitHalfSecond(){
+        try{Thread.sleep(500);}
+        catch(Exception e){System.out.println("Thread failed.");}
     }
 
 
