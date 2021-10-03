@@ -12,6 +12,8 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 
+
+//todo clean up code
 //There is 2 boards - the front end tileboard and the back end board.
 
 //The place piece problem only applies to white for some reason.
@@ -28,24 +30,34 @@ public class Main extends Application {
     private final Player white = new Player(true);
     private final Player black = new Player(false);
     private Tile [][]tileBoard = new Tile[8][8];
+
     Label whoseTurn = new Label();
     Label whitePiecesLabel = new Label();
     Label blackPiecesLabel = new Label();
     Label blackWins = new Label();
     Label whiteWins = new Label();
+    Rectangle tintedBlackForeground = new Rectangle(800,800);
 
 
     //todo For some reason you cannot create a constructor in JavaFX, look up reason later.
 
     private Parent createContent(){
+        //initialize the tintedBlackForeground
+        tintedBlackForeground.setOpacity(0.3);
+        tintedBlackForeground.setVisible(false);
+
         //initialize the blackWins and White wins text.
+        blackWins.setText("---Black wins!---");
+        whiteWins.setText("---White wins!---");
+        blackWins.setTextFill(Color.GOLD);
+        whiteWins.setTextFill(Color.GOLD);
         blackWins.setVisible(false);
         whiteWins.setVisible(false);
 
-        blackWins.setTranslateX(400);
-        blackWins.setTranslateY(400);
-        whiteWins.setTranslateX(400);
-        whiteWins.setTranslateY(400);
+        blackWins.setTranslateX(110);
+        blackWins.setTranslateY(120);
+        whiteWins.setTranslateX(110);
+        whiteWins.setTranslateY(120);
 
         blackWins.setFont(Font.font(80));
         whiteWins.setFont(Font.font(80));
@@ -56,8 +68,6 @@ public class Main extends Application {
         whoseTurn.setTranslateY(800);
 
         //Initialize the white and black piece labels.
-        blackWins.setText("Black wins!");
-        whiteWins.setText("White wins!");
         whitePiecesLabel.setText("White:"+ numWhitePieces);
         blackPiecesLabel.setText("Black:"+ numBlackPieces);
 
@@ -82,6 +92,7 @@ public class Main extends Application {
             }
         }
 
+        root.getChildren().add(tintedBlackForeground);
         root.getChildren().add(whitePiecesLabel);
         root.getChildren().add(blackPiecesLabel);
         root.getChildren().add(whoseTurn);
@@ -96,18 +107,22 @@ public class Main extends Application {
 
         private Circle piece = new Circle(40);
         //Initialize all the grid spots.
+
+        private Circle suggestion = new Circle(10);
+
         public Tile(int newRowPos,int newColPos) {
             rowPos = newRowPos;
             colPos = newColPos;
             //Initialize all the circles inside the grids as transparent until we set it as either black or white.
             piece.setFill(null);
+            suggestion.setFill(null);
 
             Rectangle border = new Rectangle(100,100);
             border.setFill(Color.DARKGREEN);
             border.setStroke(Color.BLACK);
 
             setAlignment(Pos.CENTER);
-            getChildren().addAll(border,piece);
+            getChildren().addAll(border,piece,suggestion);
             //todo you need multithreading here to make the last piece show up.
 
             setOnMouseClicked(event -> {
@@ -116,6 +131,7 @@ public class Main extends Application {
                     if(whiteTurn && board.placePiece(white,this.rowPos,this.colPos) && running){
                         whiteTurn = false;
                         setWhitePiece();
+                        clearAllSuggestions();
                         updateBoard();
                         isPlayable(black);
                         turnCounter++;
@@ -123,6 +139,7 @@ public class Main extends Application {
                     else if (!whiteTurn && board.placePiece(black,this.rowPos,this.colPos) && running){
                         whiteTurn = true;
                         setBlackPiece();
+                        clearAllSuggestions();
                         updateBoard();
                         isPlayable(white);
                         turnCounter++;
@@ -131,18 +148,36 @@ public class Main extends Application {
             });
         }
 
+        public void showWhiteSuggestion(){
+            suggestion.setFill(Color.WHITE);
+            suggestion.setStroke(Color.BLACK);
+            suggestion.setVisible(true);
+        }
+
+        public void showBlackSuggestion(){
+            suggestion.setFill(Color.BLACK);
+            suggestion.setVisible(true);
+        }
+
+        public void hideSuggestion(){
+            suggestion.setFill(null);
+            suggestion.setStroke(null);
+            suggestion.setVisible(false);
+        }
+
         public void setWhitePiece(){
             piece.setStroke(Color.BLACK);
             piece.setFill(Color.WHITE);
+            piece.setVisible(true);
         }
 
         public void setBlackPiece(){
             piece.setFill(Color.BLACK);
+            piece.setVisible(true);
         }
 
         public void hidePiece(){
-            piece.setStroke(null);
-            piece.setFill(null);
+            piece.setVisible(false);
         }
     }
 
@@ -193,18 +228,32 @@ public class Main extends Application {
 
     //todo check this cause it was buggy.
     public void isPlayable(Player player){
-        if(turnCounter == 59){
+        if(turnCounter == 59){ //todo mainly here.
             running = false;
             System.out.println("Game is over.");
             return;
         }
 
         boolean gameUnplayable = true;
-        for(int i=0;(i<8) && gameUnplayable;i++){
-            for(int j=0;(j<8) && gameUnplayable;j++){
-                if(board.getBoardSpot(i,j) == null){
-                    if(board.isSpotValid(player, i, j)){//if there is no more legal moves for that player, it will be true.
-                        gameUnplayable = false;
+        if(player.getIsWhite()){
+            for(int i=0;(i<8);i++){
+                for(int j=0;(j<8);j++){
+                    if(board.getBoardSpot(i,j) == null){
+                        if(board.isSpotValid(player, i, j)){//if there is no more legal moves for that player, it will be true.
+                            gameUnplayable = false;
+                            tileBoard[i][j].showWhiteSuggestion();
+                        }
+                    }
+                }
+            }
+        }else{
+            for(int i=0;(i<8);i++){
+                for(int j=0;(j<8);j++){
+                    if(board.getBoardSpot(i,j) == null){
+                        if(board.isSpotValid(player, i, j)){//if there is no more legal moves for that player, it will be true.
+                            gameUnplayable = false;
+                            tileBoard[i][j].showBlackSuggestion();
+                        }
                     }
                 }
             }
@@ -216,23 +265,20 @@ public class Main extends Application {
         }
     }
 
-    //todo make this add a label to the screen so the front end can see who won.
     public void displayWhoWon(){
-        playWinningPieceAnimation();
-        if(numWhitePieces < numBlackPieces){
-            blackWins.setVisible(true);
-        }else{
-            whiteWins.setVisible(true);
+        if(!running){
+            playWinningPieceAnimation();
+            tintedBlackForeground.setVisible(true);
+            if(numWhitePieces < numBlackPieces){
+                blackWins.setVisible(true);
+            }else{
+                whiteWins.setVisible(true);
+            }
         }
     }
 
-    //todo fully implement the winning piece animation.
-    //todo make this into its own thread so white and black can run concurrently.
     public void playWinningPieceAnimation(){
         clearTileBoard();
-        for(int i=0;i<4;i++){
-            waitQuarterSecond();
-        }
 
         Thread winningAnimationWhite = new Thread(){
             @Override
@@ -252,7 +298,7 @@ public class Main extends Application {
 
                 //set part of the row to white.
                 if(numWhitePartialRow > 0){
-                    int partialRowIndexWhite = numWhiteFullRow+1;
+                    int partialRowIndexWhite = numWhiteFullRow;
                     for(int j=0;j<numWhitePartialRow;j++){
                         tileBoard[partialRowIndexWhite][j].setWhitePiece();
                         try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
@@ -280,27 +326,39 @@ public class Main extends Application {
                 //set part of the row to black
                 if(numBlackPartialRow > 0){
                     int partialRowIndexBlack = 7-numBlackFullRow;
-                    for(int j=7;j>=numBlackPartialRow;j--){
+                    for(int j=7;j>=(8-numBlackPartialRow);j--){
                         tileBoard[partialRowIndexBlack][j].setBlackPiece();
                         try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
                     }
                 }
+
             }
         };
 
         winningAnimationWhite.start();
         winningAnimationBlack.start();
 
-        //wait for thread to finish
-        while(winningAnimationBlack.isAlive() || winningAnimationBlack.isAlive()){
-            try{Thread.sleep(500);}catch (Exception e){System.out.println("Thread failed!");}
+        try {
+            winningAnimationBlack.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        try {
+            winningAnimationWhite.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
     }
 
-    public void clearTileBoard() {
+    public void clearTileBoard() { //more like hide, but it works.
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++) tileBoard[i][j].hidePiece();
+    }
+
+    public void clearAllSuggestions(){ //more like set to invisible then hide, but it works.
+        for (int i = 0; i < 8; i++)
+            for (int j = 0; j < 8; j++) tileBoard[i][j].hideSuggestion();
     }
 
     public void waitQuarterSecond(){
@@ -319,6 +377,7 @@ public class Main extends Application {
         primaryStage.show();
         initializeBoard();
         updateBoard();
+        isPlayable(black);
         //todo figure out a better way to update the pieces inside the event handler.
         new Thread(){
             @Override
@@ -326,6 +385,8 @@ public class Main extends Application {
                 boolean gameRunning = true;
                 while (gameRunning) {
                     if (!running) {
+                        waitQuarterSecond();
+                        waitQuarterSecond();
                         displayWhoWon();
                         gameRunning = false;
                     } else {
