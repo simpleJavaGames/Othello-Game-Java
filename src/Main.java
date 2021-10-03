@@ -1,5 +1,4 @@
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -12,8 +11,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
-
-import java.util.Scanner;
 
 //There is 2 boards - the front end tileboard and the back end board.
 
@@ -34,16 +31,33 @@ public class Main extends Application {
     Label whoseTurn = new Label();
     Label whitePiecesLabel = new Label();
     Label blackPiecesLabel = new Label();
+    Label blackWins = new Label();
+    Label whiteWins = new Label();
+
 
     //todo For some reason you cannot create a constructor in JavaFX, look up reason later.
 
     private Parent createContent(){
+        //initialize the blackWins and White wins text.
+        blackWins.setVisible(false);
+        whiteWins.setVisible(false);
+
+        blackWins.setTranslateX(400);
+        blackWins.setTranslateY(400);
+        whiteWins.setTranslateX(400);
+        whiteWins.setTranslateY(400);
+
+        blackWins.setFont(Font.font(80));
+        whiteWins.setFont(Font.font(80));
+
         //initialize the whoseTurn label.
         whoseTurn.setFont((Font.font(60)));
         whoseTurn.setTranslateX(475);
         whoseTurn.setTranslateY(800);
 
         //Initialize the white and black piece labels.
+        blackWins.setText("Black wins!");
+        whiteWins.setText("White wins!");
         whitePiecesLabel.setText("White:"+ numWhitePieces);
         blackPiecesLabel.setText("Black:"+ numBlackPieces);
 
@@ -71,6 +85,8 @@ public class Main extends Application {
         root.getChildren().add(whitePiecesLabel);
         root.getChildren().add(blackPiecesLabel);
         root.getChildren().add(whoseTurn);
+        root.getChildren().add(blackWins);
+        root.getChildren().add(whiteWins);
         return root;
     }
 
@@ -180,7 +196,6 @@ public class Main extends Application {
         if(turnCounter == 59){
             running = false;
             System.out.println("Game is over.");
-            displayWhoWon();
             return;
         }
 
@@ -198,66 +213,87 @@ public class Main extends Application {
         if(gameUnplayable){
             running = false;
             System.out.println("No more legal moves. Ending Game");
-            displayWhoWon();
         }
     }
 
     //todo make this add a label to the screen so the front end can see who won.
     public void displayWhoWon(){
-        if(numWhitePieces < numBlackPieces){
-            System.out.println("Black wins!");
-        }else{
-            System.out.println("White wins!");
-        }
         playWinningPieceAnimation();
+        if(numWhitePieces < numBlackPieces){
+            blackWins.setVisible(true);
+        }else{
+            whiteWins.setVisible(true);
+        }
     }
 
     //todo fully implement the winning piece animation.
     //todo make this into its own thread so white and black can run concurrently.
     public void playWinningPieceAnimation(){
         clearTileBoard();
-        waitHalfSecond();
-        waitHalfSecond();
-        //set all pieces from the top left of board to however many pieces there are to white to display how
-        //pieces white has.
-        int numWhiteFullRow = numWhitePieces / 8;
-        int numWhitePartialRow = numWhitePieces % 8;
-
-        //set the whole row to white.
-        for(int i=0;i<numWhiteFullRow;i++){
-            for(int j=0;j<8;j++){
-                tileBoard[i][j].setWhitePiece();
-                //thread.sleep for more drama.
-            }
+        for(int i=0;i<4;i++){
+            waitQuarterSecond();
         }
 
-        //set part of the row to white.
-        if(numWhitePartialRow > 0){
-            int partialRowIndexWhite = numWhiteFullRow+1;
-            for(int j=0;j<numWhitePartialRow;j++){
-                tileBoard[partialRowIndexWhite][j].setWhitePiece();
-                //thread.sleep for more drama.
+        Thread winningAnimationWhite = new Thread(){
+            @Override
+            public void run() {
+                //set all pieces from the top left of board to however many pieces there are to white to display how
+                //pieces white has.
+                int numWhiteFullRow = numWhitePieces / 8;
+                int numWhitePartialRow = numWhitePieces % 8;
+
+                //set the whole row to white.
+                for(int i=0;i<numWhiteFullRow;i++){
+                    for(int j=0;j<8;j++){
+                        tileBoard[i][j].setWhitePiece();
+                        try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
+                    }
+                }
+
+                //set part of the row to white.
+                if(numWhitePartialRow > 0){
+                    int partialRowIndexWhite = numWhiteFullRow+1;
+                    for(int j=0;j<numWhitePartialRow;j++){
+                        tileBoard[partialRowIndexWhite][j].setWhitePiece();
+                        try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
+                    }
+                }
             }
-        }
+        };
 
-        int numBlackFullRow = numBlackPieces / 8; //if 20 should be 2 full rows
-        int numBlackPartialRow = numBlackPieces % 8; // if 20 should be 4 remaining
+        Thread winningAnimationBlack = new Thread(){
+            @Override
+            public void run() {
+                int numBlackFullRow = numBlackPieces / 8; //if 20 should be 2 full rows
+                int numBlackPartialRow = numBlackPieces % 8; // if 20 should be 4 remaining
 
-        //starting from the bottom right, fill the board to however many pieces black has.
+                //starting from the bottom right, fill the board to however many pieces black has.
 
-        //set the whole row to black
-        for(int i=7;i>(7-numBlackFullRow);i--){
-            for(int j=7;j>=0;j--){
-                tileBoard[i][j].setBlackPiece();
+                //set the whole row to black
+                for(int i=7;i>(7-numBlackFullRow);i--){
+                    for(int j=7;j>=0;j--){
+                        tileBoard[i][j].setBlackPiece();
+                        try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
+                    }
+                }
+
+                //set part of the row to black
+                if(numBlackPartialRow > 0){
+                    int partialRowIndexBlack = 7-numBlackFullRow;
+                    for(int j=7;j>=numBlackPartialRow;j--){
+                        tileBoard[partialRowIndexBlack][j].setBlackPiece();
+                        try{Thread.sleep(400);}catch(Exception e){System.out.println("Thread failed.");}
+                    }
+                }
             }
-        }
+        };
 
-        //set part of the row to black
-        if(numBlackPartialRow > 0){
-            int partialRowIndexBlack = 7-numBlackFullRow;
-            for(int j=7;j>=numBlackPartialRow;j--){
-                tileBoard[partialRowIndexBlack][j].setBlackPiece();
-            }
+        winningAnimationWhite.start();
+        winningAnimationBlack.start();
+
+        //wait for thread to finish
+        while(winningAnimationBlack.isAlive() || winningAnimationBlack.isAlive()){
+            try{Thread.sleep(500);}catch (Exception e){System.out.println("Thread failed!");}
         }
 
     }
@@ -267,10 +303,12 @@ public class Main extends Application {
             for (int j = 0; j < 8; j++) tileBoard[i][j].hidePiece();
     }
 
-    public void waitHalfSecond(){
-        try{Thread.sleep(500);}
+    public void waitQuarterSecond(){
+        try{Thread.sleep(250);}
         catch(Exception e){System.out.println("Thread failed.");}
     }
+
+
 
 
 
@@ -281,6 +319,25 @@ public class Main extends Application {
         primaryStage.show();
         initializeBoard();
         updateBoard();
+        //todo figure out a better way to update the pieces inside the event handler.
+        new Thread(){
+            @Override
+            public void run() {
+                boolean gameRunning = true;
+                while (gameRunning) {
+                    if (!running) {
+                        displayWhoWon();
+                        gameRunning = false;
+                    } else {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (Exception e) {
+                            System.out.println("Thread failed");
+                        }
+                    }
+                }
+            }
+        }.start();
     }
 
     public static void main(String[] args) {
